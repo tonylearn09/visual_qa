@@ -8,7 +8,7 @@ This is a project that use lstm and CNN to build the vqa system. The data is fro
 ```
 python image_extract.py
 python train.py
-    ```
+```
 5. Finally, can run `predict.py` to feed in your question and image
 
 ## Results
