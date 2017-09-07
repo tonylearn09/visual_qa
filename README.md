@@ -4,9 +4,11 @@ This is a project that use lstm and CNN to build the vqa system. The data is fro
 1. Make sure tensorflow is installed
 2. Download data from VQA
 3. Modify the path in loader.py to the correct images and questions
-4. ```python image_extract.py
-      python train.py
+4. Run following: 
 ```
+python image_extract.py
+python train.py
+    ```
 5. Finally, can run `predict.py` to feed in your question and image
 
 ## Results
