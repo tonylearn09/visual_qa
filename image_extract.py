@@ -8,6 +8,8 @@ import utils
 import h5py
 import loader
 
+from FCRN_DepthPrediction.tensorflow import predict
+
 def get_minibatches(input_set, batchsize):
     batch_image = np.ndarray((batchsize, 224, 224, 3))
     actual = 0
@@ -56,6 +58,7 @@ def img_extract(args):
         print('Start extracting image features')
         #features = np.ndarray((len(image_id_list), 4096))
         features = np.ndarray((len(unique_image_id), 4096))
+        depth_features = np.ndarray((len(unique_image_id), 112*112))
 
         count = 0
         temp = get_minibatches(unique_image_id, args.batch_size)
@@ -67,6 +70,9 @@ def img_extract(args):
             fc7_tensor = graph.get_tensor_by_name('import/Relu_1:0')
             fc7_feature = sess.run(fc7_tensor, feed_dict={images: batch_image})
             features[count*args.batch_size: count*args.batch_size+actual_batch_size] = fc7_feature
+            depth_feature = predict('NYU_FCRN.ckpt', batch_image)
+            depth_feature = depth_feature[actual_batch_size, -1]
+            depth_features[count*args.batch_size: count*args.batch_size+actual_batch_size] = depth_feature
             count += 1
 
         print('Saving fc7 features')
@@ -74,10 +80,20 @@ def img_extract(args):
         h5f_fc7.create_dataset('fc7_features', data=features)
         h5f_fc7.close()
 
+        print('Saving depth features')
+        h5f_depth = h5py.File(os.path.join(args.data_dir, args.mode + '_depth.h5'), 'w')
+        h5f_depth.create_dataset('depth_features', data=features)
+        h5f_depth.close()
+
+
         print('Saving image id list')
         h5f_image_id_list = h5py.File(os.path.join(args.data_dir, args.mode + '_image_id_list.h5'), 'w')
         h5f_image_id_list.create_dataset('image_id_list', data=list(unique_image_id))
         h5f_image_id_list.close()
+
+    # Extract depth info
+
+
 
 
 
