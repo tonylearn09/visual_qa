@@ -1,5 +1,6 @@
 # Implement VQA
-This is a project that use lstm and CNN to build the vqa system. The data is from [VQA](http://www.visualqa.org), and it uses vgg to extract image feature.
+This is a project that use lstm, CNN to build the vqa system. Besides, it incorporate depth information to perfrom better reasoning
+The data is from [VQA](http://www.visualqa.org), and it uses vgg to extract image feature.
 ## How to use
 1. Make sure tensorflow is installed
 2. Download data from VQA
