@@ -61,16 +61,22 @@ def predict(model_data_path, image_path):
 def predict_multiple(model_data_path, img):
 
     # Default input size
-    height = 228
-    width = 304
+    #height = 228
+    #width = 304
+    height = 224
+    width = 224
     channels = 3
     #batch_size = 1
     batch_size = img.shape[0]
    
     # Read image
     #img = Image.open(image_path)
-    img = img.resize([width,height], Image.ANTIALIAS)
-    img = np.array(img).astype('float32')
+    #for image in img:
+        #print(image.shape)
+        #image = image.resize([width,height], Image.ANTIALIAS)
+        #image = np.array(image).astype('float32')
+    #img = np.array(img)
+    #print(img.shape)
     #img = np.expand_dims(np.asarray(img), axis = 0)
    
     # Create a placeholder for the input image
@@ -79,10 +85,12 @@ def predict_multiple(model_data_path, img):
     # Construct the network
     net = models.ResNet50UpProj({'data': input_node}, batch_size, 1, False)
         
-    with tf.Session() as sess:
+    sess_config = tf.ConfigProto()
+    sess_config.gpu_options.allow_growth = True
+    with tf.Session(config=sess_config) as sess:
 
         # Load the converted parameters
-        print('Loading the model')
+        print('Loading the depth prediction model')
 
         # Use to load from ckpt file
         saver = tf.train.Saver()     

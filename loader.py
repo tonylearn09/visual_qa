@@ -184,4 +184,12 @@ def load_image_features(directory, mode):
         image_id_list = np.array(hf.get('image_id_list'))
     return image_features, image_id_list
 
+def load_depth_features(directory, mode):
+    with h5py.File(os.path.join(directory, (mode + '_depth.h5')),'r') as hf:
+        depth_features = np.array(hf.get('depth_features'))
+    with h5py.File(os.path.join(directory, (mode + '_image_id_list.h5')),'r') as hf:
+        image_id_list = np.array(hf.get('image_id_list'))
+    return depth_features, image_id_list
+
+
 

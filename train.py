@@ -11,6 +11,7 @@ def train(args):
 
     print('Reading image features')
     image_features, image_id_list = loader.load_image_features(args.data_dir, 'train')
+    depth_features, image_id_list = loader.load_depth_features(args.data_dir, 'train')
     #print('FC7 features shape: .{0}'.format(image_features.shape))
     #print('image_id_list shape: {0}'.format(image_id_list.shape))
     
@@ -36,7 +37,9 @@ def train(args):
     model = lstm.Lstm(model_options)
     input_tensors, t_loss, t_accuracy, t_p = model.build_model()
     train_op = tf.train.AdamOptimizer(args.learning_rate).minimize(t_loss)
-    with tf.Session() as sess:
+    sess_config = tf.ConfigProto()
+    sess_config.gpu_options.allow_growth = True
+    with tf.Session(config=sess_config) as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         if args.restore:
@@ -49,10 +52,14 @@ def train(args):
             batch_no = 0
 
             while (batch_no * args.batch_size) < len(qa_data['train']):
-                sentence, answer, fc7 = get_training_batch(batch_no, args.batch_size, 
-                                                           image_features, image_id_map, qa_data, 'train')
+                '''sentence, answer, fc7 = get_training_batch(batch_no, args.batch_size, 
+                                                           image_features, image_id_map, qa_data, 'train')'''
+                sentence, answer, fc7, depth = get_training_batch(batch_no, args.batch_size, 
+                                                                  image_features, depth_features,
+                                                                  image_id_map, qa_data, 'train')
                 _, loss_value, accuracy, pred = sess.run([train_op, t_loss, t_accuracy, t_p], feed_dict={
                     input_tensors['fc7']: fc7,
+                    input_tensors['depth']: depth,
                     input_tensors['sentence']: sentence,
                     input_tensors['answer']: answer
                 })
@@ -66,7 +73,8 @@ def train(args):
             save_path = saver.save(sess, os.path.join(args.checkpoint_dir, 'my-model')) 
 
         
-def get_training_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode):
+#def get_training_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode):
+def get_training_batch(batch_no, batch_size, image_features, depth_features, image_id_map, qa_data, mode):
     #qa = None
     if mode == 'train':
         qa_mode_data = qa_data['train']
@@ -79,6 +87,7 @@ def get_training_batch(batch_no, batch_size, image_features, image_id_map, qa_da
     sentence = np.ndarray((num_examples, qa_data['max_question_length']), dtype = 'int32')
     answer = np.zeros((num_examples, len(qa_data['answer_vocab'])))
     fc7 = np.ndarray((num_examples, 4096))
+    depth = np.ndarray((num_examples, 112*112))
 
     #count = 0
     for i in range(start, end):
@@ -86,9 +95,11 @@ def get_training_batch(batch_no, batch_size, image_features, image_id_map, qa_da
         answer[i-start, qa_mode_data[i]['answer']] = 1.0
         fc7_index = image_id_map[qa_mode_data[i]['image_id']]
         fc7[i-start, :] = image_features[fc7_index][:]
+        depth[i-start, :] = depth_features[fc7_index][:]
         #count += 1
 
-    return sentence, answer, fc7
+    #return sentence, answer, fc7
+    return sentence, answer, fc7, depth
 
 
 
@@ -108,11 +119,11 @@ if __name__ == '__main__':
                        help='dropout for image embedding')
     parser.add_argument('--data_dir', type=str, default='Data',
                        help='Data directory')
-    parser.add_argument('--batch_size', type=int, default=20,
+    parser.add_argument('--batch_size', type=int, default=128,
                        help='Batch Size')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                        help='learning rate for training')
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=10,
                        help='number of epochs')  
     parser.add_argument('--restore', type=bool, default=False,
                        help='Whether to restore')

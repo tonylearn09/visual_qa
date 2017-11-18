@@ -1,0 +1,5 @@
+*.zip
+checkpoints/
+Data
+Model/
+*.pyc

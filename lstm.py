@@ -16,6 +16,8 @@ class Lstm:
         self.Wemb = tf.Variable(tf.random_uniform([options['q_vocab_size'] + 1, options['embedding_size']], -1.0, 1.0), name = 'Wemb')
         self.Wimg = self.init_weight(options['img_feature_dim'], options['embedding_size'], name = 'Wimg')
         self.bimg = self.init_bias(options['embedding_size'], name = 'bimg')
+        self.Wdepth = self.init_weight(112*112, options['embedding_size'], name = 'Wdepth')
+        self.bdepth = self.init_bias(options['embedding_size'], name = 'bdepth')
 
         self.lstm_W = []
         self.lstm_U = []
@@ -67,6 +69,7 @@ class Lstm:
 
     def build_model(self):
         fc7_features = tf.placeholder('float32',[ None, self.options['img_feature_dim'] ], name = 'fc7')
+        depth_features = tf.placeholder('float32',[ None, 112*112 ], name = 'depth')
         # one for image
         sentence = tf.placeholder('int32',[None, self.options['lstm_steps'] - 1], name = "sentence")
         answer = tf.placeholder('float32', [None, self.options['ans_vocab_size']], name = "answer")
@@ -83,8 +86,13 @@ class Lstm:
         image_embedding = tf.nn.tanh(image_embedding)
         image_embedding = tf.nn.dropout(image_embedding, self.options['image_dropout'], name = "vis_features")
 
+        depth_embedding = tf.matmul(depth_features, self.Wdepth) + self.bdepth
+        depth_embedding = tf.nn.tanh(depth_embedding)
+        depth_embedding = tf.nn.dropout(depth_embedding, self.options['image_dropout'], name = "depth_features")
+
         # Image as the last word in the lstm
         word_embeddings.append(image_embedding)
+        word_embeddings.append(depth_embedding)
 
         lstm_output = self.forward_pass_lstm(word_embeddings)
         lstm_answer = lstm_output[-1]
@@ -99,6 +107,7 @@ class Lstm:
         loss = tf.reduce_sum(cross_entropy, name = 'loss')
         input_tensors = {
             'fc7' : fc7_features,
+            'depth' : depth_features,
             'sentence' : sentence,
             'answer' : answer
         }
@@ -106,6 +115,7 @@ class Lstm:
 
     def build_generator(self):
         fc7_features = tf.placeholder('float32',[ None, self.options['img_feature_dim'] ], name = 'fc7')
+        depth_features = tf.placeholder('float32',[ None, 112*112], name = 'depth')
         sentence = tf.placeholder('int32',[None, self.options['lstm_steps'] - 1], name = "sentence")
 
         word_embeddings = []
@@ -127,6 +137,7 @@ class Lstm:
 
         input_tensors = {
             'fc7' : fc7_features,
+            'depth' : depth_features,
             'sentence' : sentence
         }
 

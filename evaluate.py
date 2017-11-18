@@ -20,7 +20,7 @@ def eval():
                        help='dropout for image embedding')
     parser.add_argument('--data_dir', type=str, default='Data',
                        help='Data directory')
-    parser.add_argument('--batch_size', type=int, default=20,
+    parser.add_argument('--batch_size', type=int, default=128,
                        help='Batch Size')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                        help='learning rate for training')
@@ -37,7 +37,9 @@ def eval():
 
     print('Reading image features')
     image_features, image_id_list = loader.load_image_features(args.data_dir, 'val')
+    depth_features, image_id_list = loader.load_depth_features(args.data_dir, 'val')
     print('FC7 features shape: .{0}'.format(image_features.shape))
+    print('depth features shape: .{0}'.format(depth_features.shape))
     print('image_id_list shape: {0}'.format(image_id_list.shape))
     
     image_id_map = {}
@@ -74,10 +76,14 @@ def eval():
         batch_no = 0
 
         while (batch_no * args.batch_size) < len(qa_data['val']):
-            sentence, answer, fc7 = get_batch(batch_no, args.batch_size, 
-                                                       image_features, image_id_map, qa_data, 'val')
+            '''sentence, answer, fc7 = get_batch(batch_no, args.batch_size, 
+                                                       image_features, image_id_map, qa_data, 'val')'''
+            sentence, answer, fc7, depth = get_batch(batch_no, args.batch_size, 
+                                                    image_features, depth_features, 
+                                                    image_id_map, qa_data, 'val')
             pred, ans_prob = sess.run([t_p, t_ans_prob], feed_dict={
                 input_tensors['fc7']: fc7,
+                input_tensors['depth']: depth,
                 input_tensors['sentence']: sentence,
             })
             batch_no += 1
@@ -96,7 +102,8 @@ def eval():
 
 
         
-def get_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode):
+#def get_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode):
+def get_batch(batch_no, batch_size, image_features, depth_features, image_id_map, qa_data, mode):
     #qa = None
     if mode == 'train':
         qa_mode_data = qa_data['train']
@@ -109,6 +116,7 @@ def get_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode)
     sentence = np.ndarray((num_examples, qa_data['max_question_length']), dtype = 'int32')
     answer = np.zeros((num_examples, len(qa_data['answer_vocab'])))
     fc7 = np.ndarray((num_examples, 4096))
+    depth = np.ndarray((num_examples, 112*112))
 
     count = 0
     for i in range(start, end):
@@ -116,9 +124,11 @@ def get_batch(batch_no, batch_size, image_features, image_id_map, qa_data, mode)
         answer[count, qa_mode_data[i]['answer']] = 1.0
         fc7_index = image_id_map[qa_mode_data[i]['image_id']]
         fc7[count, :] = image_features[fc7_index][:]
+        depth[count, :] = depth_features[fc7_index][:]
         count += 1
 
-    return sentence, answer, fc7
+    #return sentence, answer, fc7
+    return sentence, answer, fc7, depth
 
 
 
